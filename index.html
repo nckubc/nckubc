@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>點名系統 - 雲端同步版</title>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #cbd5e1;
+      
+      --color-ontime: #16a34a;
+      --color-late: #d97706;
+      --color-leave: #2563eb;
+      --color-absent: #dc2626;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: #0f172a;
+      margin: 0;
+      padding: 12px;
+    }
+    .container {
+      max-width: 650px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: var(--primary);
+      text-align: center;
+      margin: 10px 0 20px 0;
+      font-size: 22px;
+    }
+    .status-bar {
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 10px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      color: var(--primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .event-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .form-group label {
+      font-size: 12px;
+      font-weight: bold;
+      color: #475569;
+    }
+    .add-form {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    input[type="text"], input[type="number"], input[type="date"], textarea, select {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .input-number { width: 80px; }
+    textarea {
+      height: 90px;
+      margin-bottom: 8px;
+      font-family: inherit;
+    }
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .btn-secondary { background: #475569; }
+    .btn-export {
+      background: #16a34a;
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    .roster-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .roster-tag {
+      background: #e2e8f0;
+      padding: 6px 10px;
+      border-radius: 20px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .roster-tag button {
+      background: none;
+      color: #64748b;
+      border: none;
+      padding: 0;
+      font-size: 14px;
+    }
+    .empty-tip {
+      color: #94a3b8;
+      font-size: 13px;
+      text-align: center;
+      padding: 12px 0;
+    }
+    .batch-box {
+      background: #f1f5f9;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    /* 點名模式切換按鈕區 */
+    .mode-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .mode-btn {
+      background: #e2e8f0;
+      color: #475569;
+      padding: 12px 0;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .mode-btn.active[data-mode="準時到"] {
+      background: var(--color-ontime);
+      color: white;
+      border-color: #15803d;
+    }
+    .mode-btn.active[data-mode="遲到"] {
+      background: var(--color-late);
+      color: white;
+      border-color: #b45309;
+    }
+    .mode-btn.active[data-mode="請假"] {
+      background: var(--color-leave);
+      color: white;
+      border-color: #1d4ed8;
+    }
+
+    /* 球員點名按鈕網格 */
+    .player-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 8px;
+    }
+    .player-btn {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid var(--border);
+      padding: 10px 6px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      cursor: pointer;
+    }
+    .player-btn .num {
+      font-size: 11px;
+      opacity: 0.75;
+    }
+    .player-btn.status-準時到 {
+      background: #dcfce7;
+      color: #14532d;
+      border-color: #86efac;
+      font-weight: bold;
+    }
+    .player-btn.status-遲到 {
+      background: #fef3c7;
+      color: #78350f;
+      border-color: #fde68a;
+      font-weight: bold;
+    }
+    .player-btn.status-請假 {
+      background: #dbeafe;
+      color: #1e3a8a;
+      border-color: #93c5fd;
+      font-weight: bold;
+    }
+
+    /* 統計摘要 */
+    .summary-bar {
+      display: flex;
+      justify-content: space-around;
+      background: #f8fafc;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 14px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .summary-item { display: flex; align-items: center; gap: 4px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  </style>
+
+  <!-- 引入 Firebase SDK (v9 兼容版) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <h1>📋 點名系統 (雲端同步版)</h1>
+  <div class="status-bar" id="syncStatus">☁️ 正在連線至雲端資料庫...</div>
+
+  <!-- 1. 人員名冊管理 -->
+  <div class="card">
+    <div class="card-title">
+      <span>👥 名冊管理</span>
+      <div>
+        <button class="btn-secondary" onclick="toggleBatchBox()" style="font-size:12px; padding:4px 8px;">臨時批次貼上</button>
+      </div>
+    </div>
+
+    <!-- 批次複製貼上區塊 -->
+    <div class="batch-box" id="batchBox">
+      <textarea id="batchText" placeholder="請貼上名單資料（每行一位）&#10;範例：&#10;#1 黃昱綸&#10;- 吳尚霖"></textarea>
+      <button onclick="importBatchText()" style="width:100%; background:#2563eb;">確認匯入名單</button>
+    </div>
+
+    <!-- 單一新增區塊 -->
+    <div class="add-form">
+      <input type="text" id="rosterNumber" class="input-number" placeholder="背號" />
+      <input type="text" id="rosterName" placeholder="姓名..." />
+      <button onclick="addRosterPlayer()">新增人員</button>
+    </div>
+    <div class="roster-tags" id="rosterList"></div>
+  </div>
+
+  <!-- 2. 今日點名紀錄 -->
+  <div class="card">
+    <div class="card-title">
+      <span>📝 點名紀錄</span>
+    </div>
+
+    <div class="event-info-grid">
+      <div class="form-group">
+        <label>活動日期</label>
+        <input type="date" id="eventDate" onchange="onDateOrNameChange()" />
+      </div>
+      <div class="form-group">
+        <label>活動名稱</label>
+        <input type="text" id="eventName" placeholder="例如：例行練球 / 友誼賽" value="例行練球" onchange="onDateOrNameChange()" />
+      </div>
+    </div>
+
+    <!-- 三大點名按鈕 -->
+    <div class="mode-selector">
+      <button class="mode-btn active" data-mode="準時到" onclick="setMode('準時到')">🟢 準時到</button>
+      <button class="mode-btn" data-mode="遲到" onclick="setMode('遲到')">🟡 遲到</button>
+      <button class="mode-btn" data-mode="請假" onclick="setMode('請假')">🔵 請假</button>
+    </div>
+
+    <!-- 球員點名選擇區 -->
+    <div class="player-grid" id="playerGrid"></div>
+
+    <!-- 即時人數統計 -->
+    <div class="summary-bar">
+      <span class="summary-item" style="color:var(--color-ontime);"><span class="dot" style="background:var(--color-ontime);"></span>準時到: <span id="countOntime">0</span></span>
+      <span class="summary-item" style="color:var(--color-late);"><span class="dot" style="background:var(--color-late);"></span>遲到: <span id="countLate">0</span></span>
+      <span class="summary-item" style="color:var(--color-leave);"><span class="dot" style="background:var(--color-leave);"></span>請假: <span id="countLeave">0</span></span>
+      <span class="summary-item" style="color:var(--color-absent);"><span class="dot" style="background:var(--color-absent);"></span>缺席: <span id="countAbsent">0</span></span>
+    </div>
+  </div>
+
+  <button class="btn-export" onclick="exportToExcel()">📊 匯出 Excel 報表</button>
+</div>
+
+<script>
+  // Firebase 設定金鑰
+  const firebaseConfig = {
+    apiKey: "AIzaSyAHoKuxkrPm_pp3-Bb2ieR-JDi25EdAnlo",
+    authDomain: "nckuatten.firebaseapp.com",
+    databaseURL: "https://nckuatten-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "nckuatten",
+    storageBucket: "nckuatten.firebasestorage.app",
+    messagingSenderId: "965603192755",
+    appId: "1:965603192755:web:7108e8282699ab9795e5c6",
+    measurementId: "G-0KB6SDNDNQ"
+  };
+
+  // 初始化 Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // 預設名單
+  var fixedRoster = [
+    { id: 1, number: "1", name: "黃昱綸" },
+    { id: 2, number: "2", name: "陳聲皓" },
+    { id: 3, number: "3", name: "許昭威" },
+    { id: 4, number: "4", name: "蔡朋峻" },
+    { id: 5, number: "8", name: "黃子承" },
+    { id: 6, number: "9", name: "謝翔聿" },
+    { id: 7, number: "12", name: "張永宸" },
+    { id: 8, number: "16", name: "謝竺庭" },
+    { id: 9, number: "17", name: "王昱峻" },
+    { id: 10, number: "19", name: "葉詠翔" },
+    { id: 11, number: "18", name: "顏辰峻" },
+    { id: 12, number: "20", name: "趙昱齊" },
+    { id: 13, number: "22", name: "張冠瑀" },
+    { id: 14, number: "26", name: "許恒嘉" },
+    { id: 15, number: "27", name: "詹閔任" },
+    { id: 16, number: "28", name: "黃家庠" },
+    { id: 18, number: "31", name: "林塏翔" },
+    { id: 19, number: "33", name: "張晉緁" },
+    { id: 20, number: "35", name: "王學睿" },
+    { id: 21, number: "40", name: "林建曄" },
+    { id: 22, number: "45", name: "黃尹昌" },
+    { id: 23, number: "46", name: "黄昱睿" },
+    { id: 24, number: "47", name: "林禹潼" },
+    { id: 25, number: "51", name: "賴沂磊" },
+    { id: 26, number: "52", name: "楊睿升" },
+    { id: 27, number: "55", name: "王祥予" },
+    { id: 28, number: "58", name: "王昱峻" },
+    { id: 29, number: "60", name: "鍾旻劭" },
+    { id: 30, number: "63", name: "卓廷典" },
+    { id: 31, number: "64", name: "蔡閎堯" },
+    { id: 32, number: "69", name: "林正展" },
+    { id: 33, number: "72", name: "尤允礽" },
+    { id: 34, number: "6", name: "王奐詠" },
+    { id: 35, number: "53", name: "羅傑羽" },
+    { id: 36, number: "80", name: "羅博强" },
+    { id: 37, number: "82", name: "黃楷彤" },
+    { id: 38, number: "87", name: "林洺賢" },
+    { id: 39, number: "88", name: "楊曜亘" },
+    { id: 40, number: "90", name: "李珦琳" },
+    { id: 41, number: "91", name: "李有佳" },
+    { id: 42, number: "95", name: "歐陽仲恩" },
+    { id: 43, number: "98", name: "黃中彥" },
+    { id: 44, number: "99", name: "楊承曄" },
+    { id: 45, number: "", name: "吳尚霖" },
+    { id: 46, number: "", name: "許宏倫" },
+    { id: 47, number: "", name: "張探遠" },
+    { id: 48, number: "", name: "李品鋐" },
+    { id: 49, number: "", name: "高子淳" },
+    { id: 50, number: "", name: "范譽" },
+    { id: 51, number: "", name: "謝安綸" },
+    { id: 52, number: "", name: "黃振淩" },
+    { id: 53, number: "", name: "葉宸銨" },
+    { id: 54, number: "", name: "蔡文偉" },
+    { id: 55, number: "", name: "黃聖翔" },
+    { id: 56, number: "", name: "張淳嘉" },
+    { id: 57, number: "", name: "李秉軒" },
+    { id: 58, number: "", name: "蔡政哲" },
+    { id: 59, number: "", name: "蔡益宸" },
+    { id: 60, number: "", name: "高睿陽" },
+    { id: 61, number: "", name: "王曦賢" },
+    { id: 62, number: "", name: "呂承恩" }
+  ];
+
+  var roster = JSON.parse(JSON.stringify(fixedRoster));
+  var attendanceMap = {}; 
+  var currentMode = "準時到"; 
+  var currentRef = null; // 紀錄目前 Firebase 監聽位置
+
+  function init() {
+    document.getElementById('eventDate').value = new Date().toISOString().split('T')[0];
+
+    // 1. 載入與監聽名冊
+    db.ref('roster').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        roster = data;
+      } else {
+        db.ref('roster').set(fixedRoster);
+      }
+      renderRoster();
+      renderPlayerGrid();
+      document.getElementById('syncStatus').innerText = "🟢 雲端已即時連線與同步";
+    });
+
+    // 2. 載入目前日期的點名資料
+    listenAttendanceForCurrentDate();
+  }
+
+  // 取得安全的 Firebase key 格式
+  function getRecordKey() {
+    const dateVal = document.getElementById('eventDate').value || new Date().toISOString().split('T')[0];
+    const nameVal = (document.getElementById('eventName').value || '例行練球').trim();
+    // 把不符合 Firebase key 規範的字元替換掉
+    const safeName = nameVal.replace(/[.#$/[\]]/g, '_');
+    return `${dateVal}_${safeName}`;
+  }
+
+  // 切換日期或活動名稱時觸發
+  function onDateOrNameChange() {
+    listenAttendanceForCurrentDate();
+  }
+
+  // 監聽特定日期的點名紀錄
+  function listenAttendanceForCurrentDate() {
+    const recordKey = getRecordKey();
+
+    // 先取消上一個日期的監聽
+    if (currentRef) {
+      currentRef.off();
+    }
+
+    currentRef = db.ref('attendanceRecords/' + recordKey);
+    currentRef.on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.map) {
+        attendanceMap = data.map;
+      } else {
+        // 如果該日期還沒有資料，則初始為空（預設皆為缺席）
+        attendanceMap = {};
+      }
+      renderPlayerGrid();
+    });
+  }
+
+  function saveRosterToCloud() {
+    db.ref('roster').set(roster);
+  }
+
+  function saveAttendanceToCloud() {
+    const recordKey = getRecordKey();
+    const eventDate = document.getElementById('eventDate').value;
+    const eventName = document.getElementById('eventName').value;
+
+    db.ref('attendanceRecords/' + recordKey).set({
+      eventDate: eventDate,
+      eventName: eventName,
+      map: attendanceMap,
+      updatedAt: Date.now()
+    });
+  }
+
+  function setMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      if (btn.getAttribute('data-mode') === mode) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
+  function togglePlayerStatus(playerId) {
+    if (attendanceMap[playerId] === currentMode) {
+      delete attendanceMap[playerId];
+    } else {
+      attendanceMap[playerId] = currentMode;
+    }
+    saveAttendanceToCloud();
+  }
+
+  function getSortedRoster() {
+    return roster.slice().sort(function(a, b) {
+      var numA = a.number !== "" && a.number !== undefined ? parseInt(a.number, 10) : Infinity;
+      var numB = b.number !== "" && b.number !== undefined ? parseInt(b.number, 10) : Infinity;
+      if (isNaN(numA)) numA = Infinity;
+      if (isNaN(numB)) numB = Infinity;
+      return numA - numB;
+    });
+  }
+
+  function renderPlayerGrid() {
+    var gridEl = document.getElementById('playerGrid');
+    gridEl.innerHTML = '';
+
+    var sorted = getSortedRoster();
+    var counts = { "準時到": 0, "遲到": 0, "請假": 0, "缺席": 0 };
+
+    sorted.forEach(function(player) {
+      var status = attendanceMap[player.id];
+      if (status) {
+        counts[status] = (counts[status] || 0) + 1;
+      } else {
+        counts["缺席"]++;
+      }
+
+      var btn = document.createElement('button');
+      btn.className = 'player-btn' + (status ? ' status-' + status : '');
+      var numText = player.number ? '#' + player.number : '無背號';
+      btn.innerHTML = `<span class="num">${numText}</span><span>${player.name}</span>`;
+      btn.onclick = function() { togglePlayerStatus(player.id); };
+      gridEl.appendChild(btn);
+    });
+
+    document.getElementById('countOntime').innerText = counts["準時到"];
+    document.getElementById('countLate').innerText = counts["遲到"];
+    document.getElementById('countLeave').innerText = counts["請假"];
+    document.getElementById('countAbsent').innerText = counts["缺席"];
+  }
+
+  function toggleBatchBox() {
+    var box = document.getElementById('batchBox');
+    box.style.display = box.style.display === 'block' ? 'none' : 'block';
+  }
+
+  function importBatchText() {
+    var textEl = document.getElementById('batchText');
+    var text = textEl.value.trim();
+    if (!text) return alert('請先貼上資料！');
+
+    var lines = text.split('\n');
+
+    lines.forEach(function(line) {
+      var trimmed = line.trim().replace(/✕/g, '');
+      if (!trimmed) return;
+
+      var parts = trimmed.split(/[\s\t,]+/);
+      var number = '';
+      var name = '';
+
+      if (parts.length >= 2) {
+        number = parts[0].replace('#', '').replace('-', '').trim();
+        name = parts.slice(1).join(' ').trim();
+      } else {
+        name = parts[0].replace(/^[-#]/, '').trim();
+      }
+
+      if (name) {
+        roster.push({ id: Date.now() + Math.random(), number: number, name: name });
+      }
+    });
+
+    saveRosterToCloud();
+    textEl.value = '';
+    toggleBatchBox();
+  }
+
+  function addRosterPlayer() {
+    var numInput = document.getElementById('rosterNumber');
+    var nameInput = document.getElementById('rosterName');
+    var number = numInput.value.trim();
+    var name = nameInput.value.trim();
+
+    if (name) {
+      roster.push({ id: Date.now(), number: number, name: name });
+      numInput.value = '';
+      nameInput.value = '';
+      saveRosterToCloud();
+    } else {
+      alert('請輸入姓名！');
+    }
+  }
+
+  function deleteRosterPlayer(id) {
+    roster = roster.filter(function(p) { return p.id !== id; });
+    delete attendanceMap[id];
+    saveRosterToCloud();
+    saveAttendanceToCloud();
+  }
+
+  function renderRoster() {
+    var listEl = document.getElementById('rosterList');
+    listEl.innerHTML = '';
+
+    if (roster.length === 0) {
+      listEl.innerHTML = '<div class="empty-tip">尚無名單。</div>';
+    } else {
+      var sorted = getSortedRoster();
+      sorted.forEach(function(player) {
+        var tag = document.createElement('div');
+        tag.className = 'roster-tag';
+        var numStr = player.number ? '#' + player.number + ' ' : '';
+        tag.innerHTML = '<span>' + numStr + player.name + '</span>' +
+                        '<button onclick="deleteRosterPlayer(' + player.id + ')">✕</button>';
+        listEl.appendChild(tag);
+      });
+    }
+  }
+
+  // Excel 匯出邏輯：將準時到、遲到、請假、缺席分欄顯示
+  function exportToExcel() {
+    var dateVal = document.getElementById('eventDate').value || '未填日期';
+    var nameVal = document.getElementById('eventName').value || '未填活動';
+
+    var sortedRoster = getSortedRoster();
+
+    var ontimeList = [];
+    var lateList = [];
+    var leaveList = [];
+    var absentList = [];
+
+    sortedRoster.forEach(function(player) {
+      var label = (player.number ? '#' + player.number + ' ' : '') + player.name;
+      var status = attendanceMap[player.id] || "缺席";
+
+      if (status === "準時到") ontimeList.push(label);
+      else if (status === "遲到") lateList.push(label);
+      else if (status === "請假") leaveList.push(label);
+      else absentList.push(label);
+    });
+
+    var maxRows = Math.max(ontimeList.length, lateList.length, leaveList.length, absentList.length);
+
+    var exportRows = [
+      ["活動日期", dateVal, "", ""],
+      ["活動名稱", nameVal, "", ""],
+      [], // 空白行
+      ["準時到", "遲到", "請假", "缺席"]
+    ];
+
+    for (var i = 0; i < maxRows; i++) {
+      exportRows.push([
+        ontimeList[i] || "",
+        lateList[i] || "",
+        leaveList[i] || "",
+        absentList[i] || ""
+      ]);
+    }
+
+    var worksheet = XLSX.utils.aoa_to_sheet(exportRows);
+
+    worksheet['!cols'] = [
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 }
+    ];
+
+    var workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "點名紀錄");
+
+    XLSX.writeFile(workbook, dateVal + '_' + nameVal + '_點名紀錄.xlsx');
+  }
+
+  window.onload = init;
+</script>
+
+</body>
+</html>
